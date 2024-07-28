@@ -4,8 +4,7 @@ import com.google.common.collect.ImmutableList;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
 import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
 import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
-import de.maxhenkel.voicechat.api.opus.OpusDecoder;
-import de.maxhenkel.voicechat.api.opus.OpusEncoder;
+import de.maxhenkel.voicechat.api.audiochannel.StaticAudioChannel;
 import de.maxhenkel.voicechat.api.packets.MicrophonePacket;
 import dev.mrturtle.analog.AnalogPlugin;
 import dev.mrturtle.analog.ModItems;
@@ -24,15 +23,11 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RadioUtil {
-	public static HashMap<UUID, OpusDecoder> playerDecoders = new HashMap<>();
-	public static HashMap<UUID, OpusEncoder> playerEncoders = new HashMap<>();
-
 	// You could argue these would make more sense as static methods in RadioItem, and you'd probably be right.
 	public static int getRadioChannel(ItemStack stack) {
 		NbtCompound nbt = stack.getOrCreateNbt();
@@ -94,8 +89,10 @@ public class RadioUtil {
 		MinecraftServer server = sender.getServer();
 		ServerWorld world = sender.getServerWorld();
 		byte[] encodedData = packet.getOpusEncodedData();
+		// This may have been causing issues, and it wasn't even doing anything
+
 		// Decode data
-		OpusDecoder decoder = playerDecoders.getOrDefault(sender.getUuid(), serverApi.createDecoder());
+		/*OpusDecoder decoder = playerDecoders.getOrDefault(sender.getUuid(), serverApi.createDecoder());
 		playerDecoders.putIfAbsent(sender.getUuid(), decoder);
 		if (encodedData.length == 0)
 			decoder.resetState();
@@ -107,7 +104,8 @@ public class RadioUtil {
 		playerEncoders.putIfAbsent(sender.getUuid(), encoder);
 		if (encodedData.length == 0)
 			encoder.resetState();
-		final byte[] voiceData = encoder.encode(decodedData);
+		final byte[] voiceData = encoder.encode(decodedData);*/
+
 		// Player radios
 		for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
 			if (player == sender)
@@ -118,10 +116,13 @@ public class RadioUtil {
 			int listeningDistance = ConfigManager.config.radioListeningDistance * 2;
 			List<PlayerEntity> playersInRange = world.getEntitiesByClass(PlayerEntity.class, Box.of(player.getPos(), listeningDistance, listeningDistance, listeningDistance), (entity) -> true);
 			for (PlayerEntity entity : playersInRange) {
+				// Don't attempt to send packet to player's without a voicechat connection
+				if (serverApi.getConnectionOf(entity.getUuid()) == null)
+					continue;
 				// Prioritize player's handheld radio over another player's radio
 				if (entity != player && entity != sender && isReceivingChannel(entity, senderChannel))
 					continue;
-				serverApi.sendLocationalSoundPacketTo(serverApi.getConnectionOf(entity.getUuid()), packet.locationalSoundPacketBuilder().opusEncodedData(voiceData).position(serverApi.createPosition(player.getX(), player.getY(), player.getZ())).distance(8f).build());
+				serverApi.sendLocationalSoundPacketTo(serverApi.getConnectionOf(entity.getUuid()), packet.locationalSoundPacketBuilder().opusEncodedData(encodedData).position(serverApi.createPosition(player.getX(), player.getY(), player.getZ())).distance(8f).build());
 			}
 		}
 		// Receivers
@@ -140,10 +141,13 @@ public class RadioUtil {
 				// Play voice to players nearby receiver
 				List<PlayerEntity> playersInRange = world.getEntitiesByClass(PlayerEntity.class, Box.of(receiverPos.toCenterPos(), 64, 64, 64), (entity) -> true);
 				for (PlayerEntity entity : playersInRange) {
+					// Don't attempt to send packet to player's without a voicechat connection
+					if (serverApi.getConnectionOf(entity.getUuid()) == null)
+						continue;
 					// Prioritize player's handheld radio over stationary receiver
 					if (entity != sender && isReceivingChannel(entity, senderChannel))
 						continue;
-					serverApi.sendLocationalSoundPacketTo(serverApi.getConnectionOf(entity.getUuid()), packet.locationalSoundPacketBuilder().opusEncodedData(voiceData).position(serverApi.createPosition(receiverPos.getX(), receiverPos.getY(), receiverPos.getZ())).distance(32f).build());
+					serverApi.sendLocationalSoundPacketTo(serverApi.getConnectionOf(entity.getUuid()), packet.locationalSoundPacketBuilder().opusEncodedData(encodedData).position(serverApi.createPosition(receiverPos.getX(), receiverPos.getY(), receiverPos.getZ())).distance(32f).build());
 				}
 			}
 		});
@@ -157,13 +161,15 @@ public class RadioUtil {
 		MinecraftServer server = world.getServer();
 		AtomicBoolean hasSetRunnable = new AtomicBoolean(false);
 		for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+			// Don't attempt to send packet to player's without a voicechat connection
+			if (serverApi.getConnectionOf(player.getUuid()) == null)
+				continue;
 			if (!isReceivingChannel(player, senderChannel))
 				continue;
 			// Play voice to nearby players
-			LocationalAudioChannel channel = serverApi.createLocationalAudioChannel(UUID.randomUUID(), serverApi.fromServerLevel(world), serverApi.createPosition(player.getX(), player.getY(), player.getZ()));
+			StaticAudioChannel channel = serverApi.createStaticAudioChannel(UUID.randomUUID(), serverApi.fromServerLevel(world), serverApi.getConnectionOf(player.getUuid()));
 			if (channel == null)
 				continue;
-			channel.setDistance(8f);
 			channel.setCategory(AnalogPlugin.RADIO_CATEGORY);
 			AudioPlayer audioPlayer = serverApi.createAudioPlayer(channel, serverApi.createEncoder(), audioData);
 			if (!hasSetRunnable.get()) {
