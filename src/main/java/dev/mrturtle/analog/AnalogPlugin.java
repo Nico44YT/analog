@@ -44,22 +44,24 @@ public class AnalogPlugin implements VoicechatPlugin {
 			return;
 		ServerPlayerEntity sourcePlayer = (ServerPlayerEntity) connection.getPlayer().getPlayer();
 		// Find nearby players that might be carrying radios that could transmit
-		int listeningDistance = ConfigManager.config.radioListeningDistance * 2;
-		List<ServerPlayerEntity> playersInRange = sourcePlayer.getServerWorld().getEntitiesByClass(ServerPlayerEntity.class, Box.of(sourcePlayer.getPos(), listeningDistance, listeningDistance, listeningDistance), (entity) -> true);
-		for (ServerPlayerEntity player : playersInRange) {
-			List<ItemStack> radios = RadioUtil.getRadios(player);
-			for (ItemStack stack : radios) {
-				RadioComponent component = stack.getOrDefault(ModDataComponents.RADIO, RadioComponent.DEFAULT);
-				if (!component.enabled())
-					continue;
-				if (!component.transmit())
-					continue;
-				int channel = component.channel();
-				RadioUtil.transmitOnChannel(serverApi, event.getPacket(), player, channel);
+		sourcePlayer.getServer().execute(() -> {
+			int listeningDistance = ConfigManager.config.radioListeningDistance * 2;
+			List<ServerPlayerEntity> playersInRange = sourcePlayer.getServerWorld().getEntitiesByClass(ServerPlayerEntity.class, Box.of(sourcePlayer.getPos(), listeningDistance, listeningDistance, listeningDistance), (entity) -> true);
+			for (ServerPlayerEntity player : playersInRange) {
+				List<ItemStack> radios = RadioUtil.getRadios(player);
+				for (ItemStack stack : radios) {
+					RadioComponent component = stack.getOrDefault(ModDataComponents.RADIO, RadioComponent.DEFAULT);
+					if (!component.enabled())
+						continue;
+					if (!component.transmit())
+						continue;
+					int channel = component.channel();
+					RadioUtil.transmitOnChannel(serverApi, event.getPacket(), player, channel);
+				}
 			}
-		}
-		// Find nearby transmitters and transmit on those too
-		RadioUtil.transmitOnNearbyTransmitters(serverApi, event.getPacket(), sourcePlayer);
+			// Find nearby transmitters and transmit on those too
+			RadioUtil.transmitOnNearbyTransmitters(serverApi, event.getPacket(), sourcePlayer);
+		});
 	}
 
 	@Override
