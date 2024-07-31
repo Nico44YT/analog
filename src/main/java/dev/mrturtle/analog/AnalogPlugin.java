@@ -43,6 +43,8 @@ public class AnalogPlugin implements VoicechatPlugin {
 		if (event.getPacket().getOpusEncodedData().length == 0)
 			return;
 		ServerPlayerEntity sourcePlayer = (ServerPlayerEntity) connection.getPlayer().getPlayer();
+		if (sourcePlayer.isSpectator() && !serverApi.getServerConfig().getBoolean("spectator_interaction", false))
+			return;
 		// Find nearby players that might be carrying radios that could transmit
 		sourcePlayer.getServer().execute(() -> {
 			int listeningDistance = ConfigManager.config.radioListeningDistance * 2;

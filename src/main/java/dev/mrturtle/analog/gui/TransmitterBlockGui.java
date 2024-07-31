@@ -3,10 +3,13 @@ package dev.mrturtle.analog.gui;
 import dev.mrturtle.analog.ModItems;
 import dev.mrturtle.analog.block.TransmitterBlockEntity;
 import dev.mrturtle.analog.config.ConfigManager;
+import dev.mrturtle.analog.util.RadioUtil;
+import dev.mrturtle.analog.world.GlobalRadioState;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
@@ -26,6 +29,11 @@ public class TransmitterBlockGui extends SimpleGui {
 				.setCallback(() -> {
 					int currentChannel = transmitter.channel;
 					transmitter.channel = Math.max(0, currentChannel - 1);
+
+					ServerWorld world = player.getServerWorld();
+					GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
+					globalRadioState.audioManager.changeTransmitterChannel(transmitter.getPos(), transmitter.channel);
+
 					createChannelText();
 				}).build());
 		setSlot(1, new GuiElementBuilder(ModItems.RADIO_SET_CHANNEL_BUTTON)
@@ -33,6 +41,11 @@ public class TransmitterBlockGui extends SimpleGui {
 				.setCallback(() -> {
 					RadioSelectChannelGui gui = new RadioSelectChannelGui(player, transmitter.channel, (channel) -> {
 						transmitter.channel = channel;
+
+						ServerWorld world = player.getServerWorld();
+						GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
+						globalRadioState.audioManager.changeTransmitterChannel(transmitter.getPos(), transmitter.channel);
+
 						TransmitterBlockGui radioGui = new TransmitterBlockGui(player, transmitter);
 						radioGui.open();
 					});
@@ -44,6 +57,11 @@ public class TransmitterBlockGui extends SimpleGui {
 					int maxRadioChannel = ConfigManager.config.maxRadioChannels - 1;
 					int currentChannel = transmitter.channel;
 					transmitter.channel = Math.min(maxRadioChannel, currentChannel + 1);
+
+					ServerWorld world = player.getServerWorld();
+					GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
+					globalRadioState.audioManager.changeTransmitterChannel(transmitter.getPos(), transmitter.channel);
+
 					createChannelText();
 				}).build());
 	}
@@ -62,6 +80,13 @@ public class TransmitterBlockGui extends SimpleGui {
 				.setName(Text.translatable(isEnabled ? "gui.analog.radio.turn_off" : "gui.analog.radio.turn_on"))
 				.setCallback(() -> {
 					transmitter.enabled = !isEnabled;
+
+					if (!transmitter.enabled) {
+						ServerWorld world = player.getServerWorld();
+						GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
+						globalRadioState.audioManager.stopTransmitter(transmitter.getPos());
+					}
+
 					createEnableButton();
 				}).build());
 	}
