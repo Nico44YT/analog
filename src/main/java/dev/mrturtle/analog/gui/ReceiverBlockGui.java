@@ -3,10 +3,13 @@ package dev.mrturtle.analog.gui;
 import dev.mrturtle.analog.ModItems;
 import dev.mrturtle.analog.block.ReceiverBlockEntity;
 import dev.mrturtle.analog.config.ConfigManager;
+import dev.mrturtle.analog.util.RadioUtil;
+import dev.mrturtle.analog.world.GlobalRadioState;
 import eu.pb4.sgui.api.elements.GuiElementBuilder;
 import eu.pb4.sgui.api.gui.SimpleGui;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
@@ -26,6 +29,14 @@ public class ReceiverBlockGui extends SimpleGui {
 				.setCallback(() -> {
 					int currentChannel = receiver.channel;
 					receiver.channel = Math.max(0, currentChannel - 1);
+
+					ServerWorld world = player.getServerWorld();
+					GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
+					if (receiver.enabled) {
+						globalRadioState.audioManager.receiverTurnedOff(receiver.getPos());
+						globalRadioState.audioManager.receiverTurnedOn(world, receiver.getPos(), receiver.channel);
+					}
+
 					createChannelText();
 				}).build());
 		setSlot(1, new GuiElementBuilder(ModItems.RADIO_SET_CHANNEL_BUTTON)
@@ -33,6 +44,14 @@ public class ReceiverBlockGui extends SimpleGui {
 				.setCallback(() -> {
 					RadioSelectChannelGui gui = new RadioSelectChannelGui(player, receiver.channel, (channel) -> {
 						receiver.channel = channel;
+
+						ServerWorld world = player.getServerWorld();
+						GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
+						if (receiver.enabled) {
+							globalRadioState.audioManager.receiverTurnedOff(receiver.getPos());
+							globalRadioState.audioManager.receiverTurnedOn(world, receiver.getPos(), receiver.channel);
+						}
+
 						ReceiverBlockGui radioGui = new ReceiverBlockGui(player, receiver);
 						radioGui.open();
 					});
@@ -44,6 +63,14 @@ public class ReceiverBlockGui extends SimpleGui {
 					int maxRadioChannel = ConfigManager.config.maxRadioChannels - 1;
 					int currentChannel = receiver.channel;
 					receiver.channel = Math.min(maxRadioChannel, currentChannel + 1);
+
+					ServerWorld world = player.getServerWorld();
+					GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
+					if (receiver.enabled) {
+						globalRadioState.audioManager.receiverTurnedOff(receiver.getPos());
+						globalRadioState.audioManager.receiverTurnedOn(world, receiver.getPos(), receiver.channel);
+					}
+
 					createChannelText();
 				}).build());
 	}
@@ -62,6 +89,12 @@ public class ReceiverBlockGui extends SimpleGui {
 				.setName(Text.translatable(isEnabled ? "gui.analog.radio.turn_off" : "gui.analog.radio.turn_on"))
 				.setCallback(() -> {
 					receiver.enabled = !isEnabled;
+					ServerWorld world = player.getServerWorld();
+					GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
+					if (receiver.enabled)
+						globalRadioState.audioManager.receiverTurnedOn(world, receiver.getPos(), receiver.channel);
+					else
+						globalRadioState.audioManager.receiverTurnedOff(receiver.getPos());
 					createEnableButton();
 				}).build());
 	}

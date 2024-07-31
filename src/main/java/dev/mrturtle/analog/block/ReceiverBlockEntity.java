@@ -13,15 +13,20 @@ public class ReceiverBlockEntity extends BlockEntity {
 	public boolean enabled = false;
 	public int channel = 0;
 
+	public long lastAudioPlayedTick = -100;
+
 	public ReceiverBlockEntity(BlockPos pos, BlockState state) {
 		super(ModBlockEntities.RECEIVER, pos, state);
 	}
 
 	public static void tick(World world, BlockPos pos, BlockState blockState, BlockEntity blockEntity) {
-		if (!(blockEntity instanceof ReceiverBlockEntity))
+		if (!(blockEntity instanceof ReceiverBlockEntity receiver))
 			return;
 		BlockElementHolder holder = (BlockElementHolder) BlockBoundAttachment.get(world, pos).holder();
 		holder.tick();
+		// Reset comparator output after 20 ticks of no receiving
+		if (world.getTime() - receiver.lastAudioPlayedTick == 21)
+			world.updateNeighborsAlways(pos, blockState.getBlock());
 	}
 
 	@Override

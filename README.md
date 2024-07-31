@@ -7,8 +7,10 @@ An addon for [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) 
 - Block receivers that can be tuned into a channel for passive listening
 - You can hear another person's radio and their radio can pickup your voice
 - Handheld radios can enable receiving and transmitting seperately from eachother
-- Radios can tune to 100 channels
+- Radios can tune to 100 channels (Can be changed in config)
 - Radios have infinite range but only within the same dimension
+- Transmitters can play music from nearby jukeboxes over the radio, including custom discs from [AudioPlayer](https://modrinth.com/mod/audioplayer) (1.2.0 or later)
+- Receivers output a comparator signal when receiving (1.2.0 or later)
 
 ## Download
 - [Download from Modrinth](https://modrinth.com/mod/analog/versions)

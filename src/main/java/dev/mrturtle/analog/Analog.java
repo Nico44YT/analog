@@ -1,9 +1,14 @@
 package dev.mrturtle.analog;
 
+import dev.mrturtle.analog.audio.assets.MusicAssetManager;
 import dev.mrturtle.analog.config.ConfigManager;
+import dev.mrturtle.analog.util.RadioUtil;
+import dev.mrturtle.analog.world.GlobalRadioState;
 import eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils;
 import net.fabricmc.api.ModInitializer;
 
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,5 +35,12 @@ public class Analog implements ModInitializer {
 			if (decoder != null)
 				decoder.close();
 		});*/
+
+		ServerTickEvents.START_WORLD_TICK.register((world -> {
+			GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
+			globalRadioState.audioManager.tick(world);
+		}));
+
+		ServerLifecycleEvents.SERVER_STARTED.register(MusicAssetManager::serverStarted);
 	}
 }
