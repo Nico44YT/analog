@@ -52,6 +52,20 @@ public class ReceiverBlock extends BlockWithEntity implements PolymerBlock, Bloc
 		RadioUtil.getGlobalRadioState((ServerWorld) world).removeReceiver(pos);
 	}
 
+	@Override
+	public boolean hasComparatorOutput(BlockState state) {
+		return true;
+	}
+
+	@Override
+	public int getComparatorOutput(BlockState state, World world, BlockPos pos) {
+		if (!(world.getBlockEntity(pos) instanceof ReceiverBlockEntity receiver))
+			return 0;
+		if (world.getTime() - receiver.lastAudioPlayedTick > 20)
+			return 0;
+		return 15;
+	}
+
 	@Nullable
 	@Override
 	public BlockState getPlacementState(ItemPlacementContext ctx) {

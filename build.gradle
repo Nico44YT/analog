@@ -25,6 +25,7 @@ repositories {
 		}
 	}
 	maven { url = 'https://maven.maxhenkel.de/repository/public' }
+	mavenCentral()
 }
 
 dependencies {
@@ -49,6 +50,9 @@ dependencies {
 	modImplementation include("eu.pb4:polymer-blocks:0.5.7+1.20.1")
 	modImplementation include("eu.pb4:polymer-resource-pack:0.5.7+1.20.1")
 	modImplementation include("eu.pb4:polymer-autohost:0.5.7+1.20.1")
+
+	implementation include("net.lingala.zip4j:zip4j:2.11.5")
+	implementation include("com.github.trilarion:java-vorbis-support:1.2.1")
 }
 
 processResources {

@@ -2,12 +2,10 @@ package dev.mrturtle.analog.util;
 
 import com.google.common.collect.ImmutableList;
 import de.maxhenkel.voicechat.api.VoicechatServerApi;
-import de.maxhenkel.voicechat.api.audiochannel.AudioPlayer;
-import de.maxhenkel.voicechat.api.audiochannel.LocationalAudioChannel;
-import de.maxhenkel.voicechat.api.audiochannel.StaticAudioChannel;
 import de.maxhenkel.voicechat.api.packets.MicrophonePacket;
-import dev.mrturtle.analog.AnalogPlugin;
+import dev.mrturtle.analog.ModBlocks;
 import dev.mrturtle.analog.ModItems;
+import dev.mrturtle.analog.audio.RadioAudioInstance;
 import dev.mrturtle.analog.block.ReceiverBlockEntity;
 import dev.mrturtle.analog.block.TransmitterBlockEntity;
 import dev.mrturtle.analog.config.ConfigManager;
@@ -24,8 +22,6 @@ import net.minecraft.util.math.Vec3d;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RadioUtil {
 	// You could argue these would make more sense as static methods in RadioItem, and you'd probably be right.
@@ -138,6 +134,8 @@ public class RadioUtil {
 					continue;
 				if (receiver.channel != senderChannel)
 					continue;
+				receiver.lastAudioPlayedTick = world.getTime();
+				world.updateNeighborsAlways(receiverPos, ModBlocks.RECEIVER_BLOCK);
 				// Play voice to players nearby receiver
 				List<PlayerEntity> playersInRange = world.getEntitiesByClass(PlayerEntity.class, Box.of(receiverPos.toCenterPos(), 64, 64, 64), (entity) -> true);
 				for (PlayerEntity entity : playersInRange) {
@@ -153,34 +151,28 @@ public class RadioUtil {
 		});
 	}
 
-	public static void transmitDataOnChannel(VoicechatServerApi serverApi, ServerWorld world, short[] audioData, int senderChannel) {
-		transmitDataOnChannel(serverApi, world, audioData, senderChannel, null);
+	public static RadioAudioInstance transmitDataOnChannel(VoicechatServerApi serverApi, ServerWorld world, short[] audioData, int senderChannel) {
+		return transmitDataOnChannel(serverApi, world, audioData, senderChannel, null);
 	}
 
-	public static void transmitDataOnChannel(VoicechatServerApi serverApi, ServerWorld world, short[] audioData, int senderChannel, Runnable onAudioStopped) {
+	public static RadioAudioInstance transmitDataOnChannel(VoicechatServerApi serverApi, ServerWorld world, short[] audioData, int senderChannel, Runnable onAudioStopped) {
+		RadioAudioInstance audioInstance = new RadioAudioInstance(senderChannel, audioData, onAudioStopped);
 		MinecraftServer server = world.getServer();
-		AtomicBoolean hasSetRunnable = new AtomicBoolean(false);
+
+		GlobalRadioState globalRadioState = getGlobalRadioState(world);
+		globalRadioState.audioManager.activeAudioInstances.add(audioInstance);
+
 		for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
 			// Don't attempt to send packet to player's without a voicechat connection
 			if (serverApi.getConnectionOf(player.getUuid()) == null)
 				continue;
 			if (!isReceivingChannel(player, senderChannel))
 				continue;
-			// Play voice to nearby players
-			StaticAudioChannel channel = serverApi.createStaticAudioChannel(UUID.randomUUID(), serverApi.fromServerLevel(world), serverApi.getConnectionOf(player.getUuid()));
-			if (channel == null)
-				continue;
-			channel.setCategory(AnalogPlugin.RADIO_CATEGORY);
-			AudioPlayer audioPlayer = serverApi.createAudioPlayer(channel, serverApi.createEncoder(), audioData);
-			if (!hasSetRunnable.get()) {
-				audioPlayer.setOnStopped(onAudioStopped);
-				hasSetRunnable.set(true);
-			}
-			audioPlayer.startPlaying();
+			globalRadioState.audioManager.startReceivingAudioInstance(world, player, audioInstance);
 		}
 		// Receivers
 		server.execute(() -> {
-			List<BlockPos> receivers = getGlobalRadioState(world).getReceivers();
+			List<BlockPos> receivers = globalRadioState.getReceivers();
 			for (BlockPos receiverPos : receivers) {
 				if (!world.isChunkLoaded(receiverPos))
 					continue;
@@ -191,19 +183,11 @@ public class RadioUtil {
 					continue;
 				if (receiver.channel != senderChannel)
 					continue;
-				LocationalAudioChannel channel = serverApi.createLocationalAudioChannel(UUID.randomUUID(), serverApi.fromServerLevel(world), serverApi.createPosition(receiverPos.toCenterPos().getX(), receiverPos.toCenterPos().getY(), receiverPos.toCenterPos().getZ()));
-				if (channel == null)
-					continue;
-				channel.setDistance(8f);
-				channel.setCategory(AnalogPlugin.RADIO_CATEGORY);
-				AudioPlayer audioPlayer = serverApi.createAudioPlayer(channel, serverApi.createEncoder(), audioData);
-				if (!hasSetRunnable.get()) {
-					audioPlayer.setOnStopped(onAudioStopped);
-					hasSetRunnable.set(true);
-				}
-				audioPlayer.startPlaying();
+				globalRadioState.audioManager.startReceivingAudioInstance(world, receiverPos, audioInstance);
 			}
 		});
+
+		return audioInstance;
 	}
 
 	public static void transmitOnNearbyTransmitters(VoicechatServerApi serverApi, MicrophonePacket packet, ServerPlayerEntity sender) {

@@ -1,5 +1,6 @@
 package dev.mrturtle.analog.world;
 
+import dev.mrturtle.analog.audio.RadioAudioManager;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtHelper;
@@ -14,6 +15,8 @@ public class GlobalRadioState extends PersistentState {
 	private final ArrayList<BlockPos> transmitterList;
 	private final ArrayList<BlockPos> receiverList;
 
+	public final RadioAudioManager audioManager = new RadioAudioManager();
+
 	public GlobalRadioState() {
 		transmitterList = new ArrayList<>();
 		receiverList = new ArrayList<>();
@@ -26,6 +29,7 @@ public class GlobalRadioState extends PersistentState {
 
 	public void removeTransmitter(BlockPos pos) {
 		transmitterList.remove(pos);
+		audioManager.stopTransmitter(pos);
 		markDirty();
 	}
 
@@ -36,6 +40,7 @@ public class GlobalRadioState extends PersistentState {
 
 	public void removeReceiver(BlockPos pos) {
 		receiverList.remove(pos);
+		audioManager.receiverTurnedOff(pos);
 		markDirty();
 	}
 
