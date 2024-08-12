@@ -14,8 +14,11 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.jukebox.JukeboxManager;
 import net.minecraft.block.jukebox.JukeboxSong;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -45,8 +48,12 @@ public abstract class JukeboxManagerMixin implements JukeboxManagerAccessor {
 			return;
 
 		// We can't play anything if the record files failed to load, or they aren't loaded yet
-		if (!MusicAssetManager.recordsLoaded)
+		if (!MusicAssetManager.recordsLoaded) {
+			PlayerEntity closestPlayer = world.getClosestPlayer(pos.getX(), pos.getY(), pos.getZ(), 8, EntityPredicates.EXCEPT_SPECTATOR);
+			if (closestPlayer != null)
+				closestPlayer.sendMessage(Text.translatable("gui.analog.jukebox.asset_failure"), true);
 			return;
+		}
 
 		Identifier songId = song.value().soundEvent().value().getId();
 		// We can only play vanilla records over the radio
@@ -62,7 +69,7 @@ public abstract class JukeboxManagerMixin implements JukeboxManagerAccessor {
 			e.printStackTrace();
 		}
 
-		analog$makeNearbyTransmittersPlay(world);
+		analog$makeNearbyTransmittersPlay(world, true);
 	}
 
 	@Inject(method = "stopPlaying", at = @At("TAIL"))
@@ -76,7 +83,7 @@ public abstract class JukeboxManagerMixin implements JukeboxManagerAccessor {
 	public void tick(WorldAccess world, BlockState state, CallbackInfo ci) {
 		if (!isPlaying())
 			return;
-		analog$makeNearbyTransmittersPlay(world);
+		analog$makeNearbyTransmittersPlay(world, false);
 	}
 
 	@Unique
@@ -97,7 +104,7 @@ public abstract class JukeboxManagerMixin implements JukeboxManagerAccessor {
 	}
 
 	@Unique
-	public void analog$makeNearbyTransmittersPlay(WorldAccess world) {
+	public void analog$makeNearbyTransmittersPlay(WorldAccess world, boolean overrideExisting) {
 		if (cachedAudio == null)
 			return;
 
@@ -113,7 +120,12 @@ public abstract class JukeboxManagerMixin implements JukeboxManagerAccessor {
 				continue;
 			HashMap<BlockPos, RadioAudioInstance> audioInstances = globalRadioState.audioManager.transmitterAudioInstances.computeIfAbsent(transmitterPos, (playerEntity) -> new HashMap<>());
 			// Only create an audio instance if the transmitter isn't already playing this jukebox's audio
-			if (!audioInstances.containsKey(pos.toImmutable())) {
+			// Unless overrideExisting is set, in which case we replace the existing audio
+			if (!audioInstances.containsKey(pos.toImmutable()) || overrideExisting) {
+				// Stop currently playing audio, if it exists
+				if (audioInstances.containsKey(pos.toImmutable()))
+					globalRadioState.audioManager.stopTransmitter(transmitterPos, pos);
+
 				// If the jukebox was playing before the transmitter was turned on it will need to start at the current part of the song
 				int startIndex = (int) (2400 * ticksSinceSongStarted);
 

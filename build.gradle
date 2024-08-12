@@ -25,6 +25,7 @@ repositories {
 		}
 	}
 	maven { url = 'https://maven.maxhenkel.de/repository/public' }
+	maven { url = "https://maven.bawnorton.com/releases" }
 }
 
 dependencies {
@@ -52,6 +53,7 @@ dependencies {
 
 	implementation include("net.lingala.zip4j:zip4j:2.11.5")
 	implementation include("com.github.trilarion:java-vorbis-support:1.2.1")
+	implementation include(annotationProcessor("com.bawnorton.mixinsquared:mixinsquared-fabric:0.2.0-beta.6"))
 }
 
 processResources {

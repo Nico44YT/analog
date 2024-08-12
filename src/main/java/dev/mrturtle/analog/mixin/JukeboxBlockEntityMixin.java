@@ -45,11 +45,8 @@ public abstract class JukeboxBlockEntityMixin extends BlockEntity {
             if (nbt.copyNbt().containsUuid("CustomSound"))
                 isAudioPlayerDisc = true;
 
-        if (!isAudioPlayerDisc)
-            return;
-
         Optional<RegistryEntry<JukeboxSong>> optionalSongEntry = JukeboxSong.getSongEntryFromStack(world.getRegistryManager(), stack);
-        if (optionalSongEntry.isPresent()) {
+        if (isAudioPlayerDisc) {
             String songName = "%s".formatted(nbt.copyNbt().getUuid("CustomSound"));
             Path basePath = world.getServer().getSavePath(WorldSavePath.ROOT).resolve("audio_player_data");
 
@@ -58,12 +55,12 @@ public abstract class JukeboxBlockEntityMixin extends BlockEntity {
                 songExtension = ".mp3";
             try {
                 ((JukeboxManagerAccessor) manager).analog$setCachedAudio(RadioAudioUtil.getAudioData(basePath.resolve(songName + songExtension)));
-                ((JukeboxManagerAccessor) manager).analog$makeNearbyTransmittersPlay(world);
+                ((JukeboxManagerAccessor) manager).analog$makeNearbyTransmittersPlay(world, true);
             } catch (Exception e) {
                 Analog.LOGGER.error("Failed to load a custom Audio Player music disc for playback from path %s".formatted(songName + songExtension));
                 e.printStackTrace();
             }
-        } else {
+        } else if (optionalSongEntry.isEmpty()) {
             ((JukeboxManagerAccessor) manager).analog$makeNearbyTransmittersStop(world);
         }
     }

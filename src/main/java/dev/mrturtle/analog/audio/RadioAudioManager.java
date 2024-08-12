@@ -68,6 +68,37 @@ public class RadioAudioManager {
 				}
 			}
 		}
+
+		for (BlockPos receiverPos : RadioUtil.getGlobalRadioState(world).getReceivers()) {
+			if (!world.isChunkLoaded(receiverPos))
+				continue;
+			ReceiverBlockEntity receiver = (ReceiverBlockEntity) world.getBlockEntity(receiverPos);
+			if (receiver == null)
+				continue;
+			if (!receiver.enabled)
+				continue;
+
+			if (!receiverAudioPlayers.containsKey(receiverPos)) {
+				receiverTurnedOn(world, receiverPos, receiver.channel);
+			} else {
+				ArrayList<ReceiverAudioData> audioPlayers = receiverAudioPlayers.get(receiverPos);
+				for (RadioAudioInstance instance : activeAudioInstances) {
+					if (instance.channel != receiver.channel)
+						continue;
+
+					boolean alreadyPlaying = false;
+					for (ReceiverAudioData audioPlayer : audioPlayers) {
+                        if (audioPlayer.instance != instance)
+							continue;
+						alreadyPlaying = true;
+					}
+					if (alreadyPlaying)
+						continue;
+
+					startReceivingAudioInstance(world, receiverPos, instance);
+				}
+			}
+		}
 	}
 
 	public void receiverTurnedOn(ServerWorld world, BlockPos pos, int receivingChannel) {
@@ -86,6 +117,7 @@ public class RadioAudioManager {
 			if (audioData.audioPlayer.isPlaying())
 				audioData.audioPlayer.stopPlaying();
 		}
+		receiverAudioPlayers.remove(pos);
 	}
 
 	public void playerReceiverTurnedOn(ServerPlayerEntity player, int receivingChannel) {
@@ -121,6 +153,7 @@ public class RadioAudioManager {
 		for (PlayerAudioData audioData : toBeRemoved) {
 			audioPlayers.remove(audioData);
 		}
+		playerAudioPlayers.remove(player);
 	}
 
 	public void startReceivingAudioInstance(ServerWorld world, BlockPos pos, RadioAudioInstance instance) {
