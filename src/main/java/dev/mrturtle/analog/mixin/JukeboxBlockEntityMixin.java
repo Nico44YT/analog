@@ -16,9 +16,12 @@ import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.JukeboxBlockEntity;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.SingleStackInventory;
 import net.minecraft.item.MusicDiscItem;
+import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.math.BlockPos;
@@ -53,10 +56,6 @@ public abstract class JukeboxBlockEntityMixin extends BlockEntity implements Sin
 		if (!hasWorld() || world.isClient)
 			return;
 
-		// We can't play anything if the record files failed to load, or they aren't loaded yet
-		if (!MusicAssetManager.recordsLoaded)
-			return;
-
 		if (!(getStack().getItem() instanceof MusicDiscItem discItem))
 			return;
 		Identifier songId = discItem.getSound().getId();
@@ -69,6 +68,14 @@ public abstract class JukeboxBlockEntityMixin extends BlockEntity implements Sin
 		if (nbt != null)
 			if (nbt.copyNbt().containsUuid("CustomSound"))
 				isAudioPlayerDisc = true;
+
+		// We can't play vanilla discs if the record files failed to load, or they aren't loaded yet
+		if (!isAudioPlayerDisc && !MusicAssetManager.recordsLoaded) {
+			PlayerEntity closestPlayer = world.getClosestPlayer(pos.getX(), pos.getY(), pos.getZ(), 8, EntityPredicates.EXCEPT_SPECTATOR);
+			if (closestPlayer != null)
+				closestPlayer.sendMessage(Text.translatable("gui.analog.jukebox.asset_failure"), true);
+			return;
+		}
 
 		cachedAudio = null;
 		if (!isAudioPlayerDisc) {
@@ -94,7 +101,7 @@ public abstract class JukeboxBlockEntityMixin extends BlockEntity implements Sin
 			}
 		}
 
-		makeNearbyTransmittersPlay();
+		makeNearbyTransmittersPlay(true);
 	}
 
 	@Inject(method = "stopPlaying", at = @At("TAIL"))
@@ -121,11 +128,11 @@ public abstract class JukeboxBlockEntityMixin extends BlockEntity implements Sin
 	public void tick(World world, BlockPos pos, BlockState state, CallbackInfo ci) {
 		if (!isPlayingRecord())
 			return;
-		makeNearbyTransmittersPlay();
+		makeNearbyTransmittersPlay(false);
 	}
 
 	@Unique
-	private void makeNearbyTransmittersPlay() {
+	private void makeNearbyTransmittersPlay(boolean overrideExisting) {
 		if (cachedAudio == null)
 			return;
 
@@ -141,7 +148,12 @@ public abstract class JukeboxBlockEntityMixin extends BlockEntity implements Sin
 				continue;
 			HashMap<BlockPos, RadioAudioInstance> audioInstances = globalRadioState.audioManager.transmitterAudioInstances.computeIfAbsent(transmitterPos, (playerEntity) -> new HashMap<>());
 			// Only create an audio instance if the transmitter isn't already playing this jukebox's audio
-			if (!audioInstances.containsKey(pos.toImmutable())) {
+			// Unless overrideExisting is set, in which case we replace the existing audio
+			if (!audioInstances.containsKey(pos.toImmutable()) || overrideExisting) {
+				// Stop currently playing audio, if it exists
+				if (audioInstances.containsKey(pos.toImmutable()))
+					globalRadioState.audioManager.stopTransmitter(transmitterPos, pos);
+
 				// If the jukebox was playing before the transmitter was turned on it will need to start at the current part of the song
 				int ticksPlayingFor = (int) (tickCount - recordStartTick);
 				int startIndex = 2400 * ticksPlayingFor;

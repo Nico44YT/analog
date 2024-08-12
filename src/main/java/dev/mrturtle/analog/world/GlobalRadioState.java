@@ -84,7 +84,9 @@ public class GlobalRadioState extends PersistentState {
 		tag.put("globalTransmitters", transmitterList);
 		NbtList receiverList = new NbtList();
 		for (BlockPos pos : this.receiverList) {
-			receiverList.add(NbtHelper.fromBlockPos(pos));
+			NbtCompound compound = new NbtCompound();
+			compound.put("pos", NbtHelper.fromBlockPos(pos));
+			receiverList.add(compound);
 		}
 		tag.put("globalReceivers", receiverList);
 		return tag;

@@ -16,5 +16,6 @@
 	"gui.analog.radio.stop_receiving": "Stop Receiving",
 	"gui.analog.radio.set_channel.title": "Set Channel Number",
 	"gui.analog.radio.started_transmitting": "Started Transmitting on Channel %s",
-	"gui.analog.radio.stopped_transmitting": "Stopped Transmitting on Channel %s"
+	"gui.analog.radio.stopped_transmitting": "Stopped Transmitting on Channel %s",
+	"gui.analog.jukebox.asset_failure": "Cannot play music disc over transmitter as assets aren't loaded yet"
 }
