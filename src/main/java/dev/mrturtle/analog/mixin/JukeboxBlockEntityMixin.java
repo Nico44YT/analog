@@ -14,10 +14,13 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.JukeboxBlockEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.SingleStackInventory;
 import net.minecraft.item.MusicDiscItem;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.util.math.BlockPos;
@@ -52,10 +55,6 @@ public abstract class JukeboxBlockEntityMixin extends BlockEntity implements Sin
 		if (!hasWorld() || world.isClient)
 			return;
 
-		// We can't play anything if the record files failed to load, or they aren't loaded yet
-		if (!MusicAssetManager.recordsLoaded)
-			return;
-
 		if (!(getStack().getItem() instanceof MusicDiscItem discItem))
 			return;
 		Identifier songId = discItem.getSound().getId();
@@ -68,6 +67,14 @@ public abstract class JukeboxBlockEntityMixin extends BlockEntity implements Sin
 		if (nbt != null)
 			if (nbt.containsUuid("CustomSound"))
 				isAudioPlayerDisc = true;
+
+		// We can't play vanilla discs if the record files failed to load, or they aren't loaded yet
+		if (!isAudioPlayerDisc && !MusicAssetManager.recordsLoaded) {
+			PlayerEntity closestPlayer = world.getClosestPlayer(pos.getX(), pos.getY(), pos.getZ(), 8, EntityPredicates.EXCEPT_SPECTATOR);
+			if (closestPlayer != null)
+				closestPlayer.sendMessage(Text.translatable("gui.analog.jukebox.asset_failure"), true);
+			return;
+		}
 
 		cachedAudio = null;
 		if (!isAudioPlayerDisc) {

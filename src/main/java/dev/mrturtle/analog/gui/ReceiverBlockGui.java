@@ -37,6 +37,8 @@ public class ReceiverBlockGui extends SimpleGui {
 						globalRadioState.audioManager.receiverTurnedOn(world, receiver.getPos(), receiver.channel);
 					}
 
+					receiver.markDirty();
+
 					createChannelText();
 				}).build());
 		setSlot(1, new GuiElementBuilder(ModItems.RADIO_SET_CHANNEL_BUTTON)
@@ -51,6 +53,8 @@ public class ReceiverBlockGui extends SimpleGui {
 							globalRadioState.audioManager.receiverTurnedOff(receiver.getPos());
 							globalRadioState.audioManager.receiverTurnedOn(world, receiver.getPos(), receiver.channel);
 						}
+
+						receiver.markDirty();
 
 						ReceiverBlockGui radioGui = new ReceiverBlockGui(player, receiver);
 						radioGui.open();
@@ -70,6 +74,8 @@ public class ReceiverBlockGui extends SimpleGui {
 						globalRadioState.audioManager.receiverTurnedOff(receiver.getPos());
 						globalRadioState.audioManager.receiverTurnedOn(world, receiver.getPos(), receiver.channel);
 					}
+
+					receiver.markDirty();
 
 					createChannelText();
 				}).build());
@@ -95,6 +101,9 @@ public class ReceiverBlockGui extends SimpleGui {
 						globalRadioState.audioManager.receiverTurnedOn(world, receiver.getPos(), receiver.channel);
 					else
 						globalRadioState.audioManager.receiverTurnedOff(receiver.getPos());
+
+					receiver.markDirty();
+
 					createEnableButton();
 				}).build());
 	}

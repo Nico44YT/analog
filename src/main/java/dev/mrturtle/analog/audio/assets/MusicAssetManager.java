@@ -25,16 +25,18 @@ public class MusicAssetManager {
 	public static boolean recordsLoaded = false;
 
 	public static void serverStarted(MinecraftServer server) {
-		if (!FabricLoader.getInstance().getConfigDir().resolve(ASSETS_RECORDS_PATH).toFile().exists()) {
-			if (!FabricLoader.getInstance().getConfigDir().resolve(ASSETS_ZIP_PATH).toFile().exists()) {
-				downloadAssets(server);
-				// downloadAssets calls processAssets when the assets are done downloading
+		new Thread(() -> {
+			if (!FabricLoader.getInstance().getConfigDir().resolve(ASSETS_RECORDS_PATH).toFile().exists()) {
+				if (!FabricLoader.getInstance().getConfigDir().resolve(ASSETS_ZIP_PATH).toFile().exists()) {
+					downloadAssets(server);
+					// downloadAssets calls processAssets when the assets are done downloading
+				} else {
+					processAssets();
+				}
 			} else {
-				processAssets();
+				recordsLoaded = true;
 			}
-		} else {
-			recordsLoaded = true;
-		}
+		}).start();
 	}
 
 	private static void processAssets() {

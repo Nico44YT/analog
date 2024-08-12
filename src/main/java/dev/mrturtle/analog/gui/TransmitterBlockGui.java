@@ -34,6 +34,8 @@ public class TransmitterBlockGui extends SimpleGui {
 					GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
 					globalRadioState.audioManager.changeTransmitterChannel(transmitter.getPos(), transmitter.channel);
 
+					transmitter.markDirty();
+
 					createChannelText();
 				}).build());
 		setSlot(1, new GuiElementBuilder(ModItems.RADIO_SET_CHANNEL_BUTTON)
@@ -45,6 +47,8 @@ public class TransmitterBlockGui extends SimpleGui {
 						ServerWorld world = player.getServerWorld();
 						GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
 						globalRadioState.audioManager.changeTransmitterChannel(transmitter.getPos(), transmitter.channel);
+
+						transmitter.markDirty();
 
 						TransmitterBlockGui radioGui = new TransmitterBlockGui(player, transmitter);
 						radioGui.open();
@@ -61,6 +65,8 @@ public class TransmitterBlockGui extends SimpleGui {
 					ServerWorld world = player.getServerWorld();
 					GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
 					globalRadioState.audioManager.changeTransmitterChannel(transmitter.getPos(), transmitter.channel);
+
+					transmitter.markDirty();
 
 					createChannelText();
 				}).build());
@@ -86,6 +92,8 @@ public class TransmitterBlockGui extends SimpleGui {
 						GlobalRadioState globalRadioState = RadioUtil.getGlobalRadioState(world);
 						globalRadioState.audioManager.stopTransmitter(transmitter.getPos());
 					}
+
+					transmitter.markDirty();
 
 					createEnableButton();
 				}).build());
