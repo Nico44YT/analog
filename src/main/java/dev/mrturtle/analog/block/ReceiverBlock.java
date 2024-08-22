@@ -36,6 +36,9 @@ public class ReceiverBlock extends BlockWithEntity implements PolymerBlock, Bloc
 
 	@Override
 	public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+		if (world.isClient)
+			return ActionResult.SUCCESS;
+
 		ReceiverBlockGui gui = new ReceiverBlockGui((ServerPlayerEntity) player, (ReceiverBlockEntity) world.getBlockEntity(pos));
 		gui.open();
 		return ActionResult.SUCCESS;

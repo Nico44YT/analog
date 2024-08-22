@@ -34,6 +34,9 @@ public class RadioItem extends Item implements PolymerItem {
 	@Override
 	public TypedActionResult<ItemStack> use(World world, PlayerEntity player, Hand hand) {
 		ItemStack stack = player.getStackInHand(hand);
+		if (world.isClient)
+			return TypedActionResult.success(stack);
+
 		RadioItemGui gui = new RadioItemGui((ServerPlayerEntity) player, stack);
 		gui.open();
 		return TypedActionResult.success(stack);

@@ -36,6 +36,9 @@ public class TransmitterBlock extends BlockWithEntity implements PolymerBlock, B
 
 	@Override
 	public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+		if (world.isClient)
+			return ActionResult.SUCCESS;
+
 		TransmitterBlockGui gui = new TransmitterBlockGui((ServerPlayerEntity) player, (TransmitterBlockEntity) world.getBlockEntity(pos));
 		gui.open();
 		return ActionResult.SUCCESS;
