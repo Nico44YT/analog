@@ -56,12 +56,9 @@ public abstract class JukeboxManagerMixin implements JukeboxManagerAccessor {
 		}
 
 		Identifier songId = song.value().soundEvent().value().getId();
-		// We can only play vanilla records over the radio
-		if (!songId.getNamespace().equals("minecraft"))
-			return;
 
 		cachedAudio = null;
-		String songPath = "analog/records/%s.ogg".formatted(songId.getPath().replace("music_disc.", ""));
+		String songPath = "analog/records/%s/%s.ogg".formatted(songId.getNamespace(), songId.getPath().replace("music_disc.", ""));
 		try {
 			cachedAudio = RadioAudioUtil.getAudioData(FabricLoader.getInstance().getConfigDir().resolve(songPath));
 		} catch (Exception e) {

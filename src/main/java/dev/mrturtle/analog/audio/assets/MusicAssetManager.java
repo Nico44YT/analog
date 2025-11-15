@@ -46,7 +46,7 @@ public class MusicAssetManager {
 		try (ZipFile zip = new ZipFile(file)) {
 			FileHeader rootFolderHeader = zip.getFileHeaders().get(0);
 			String exportPath = FabricLoader.getInstance().getConfigDir().resolve(ASSETS_RECORDS_PATH).getParent().toAbsolutePath().toString();
-			zip.extractFile(rootFolderHeader.getFileName() + RECORDS_PATH, exportPath, "records");
+			zip.extractFile(rootFolderHeader.getFileName() + RECORDS_PATH, exportPath, "records/minecraft");
 			Analog.LOGGER.info("Successfully processed assets for music disc playback!");
 			recordsLoaded = true;
 			file.delete();
@@ -71,13 +71,16 @@ public class MusicAssetManager {
 					.GET()
 					.build();
 
+			Analog.LOGGER.info("Started downloading assets pack...");
 			httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream()).thenAccept((response) -> {
 				try (InputStream stream = response.body()) {
 					byte[] bytes = stream.readAllBytes();
 
 					File analogDirectory = FabricLoader.getInstance().getConfigDir().resolve(ASSETS_ZIP_PATH).getParent().toFile();
-					if (!analogDirectory.mkdirs())
+					if (!analogDirectory.mkdirs()) {
+						Analog.LOGGER.info("Aborted download");
 						return;
+					}
 
 					File file = FabricLoader.getInstance().getConfigDir().resolve(ASSETS_ZIP_PATH).toFile();
 
